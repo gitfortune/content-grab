@@ -64,7 +64,7 @@ public class ContentGrab {
             for (Element li : lis) {
                 String linkHref = li.getElementsByTag("a").attr("href");
                 String linkText = li.getElementsByTag("a").text();
-                //截取年月日 时间
+                //截取新闻标题后面的时间-年月日格式
                 String time = li.getElementsByTag("span").text().substring(0, 10);
                 if(DateUtil.isToday(time)){
                     //是当天新闻，继续解析
@@ -128,7 +128,6 @@ public class ContentGrab {
      * 抓取央广新闻链接
      */
     public void grabCNRLinks(String url){
-        int i = 0;
         try {
             Document doc = Jsoup.connect(url).get();
             //根据页面html的结构，获取该页面的新闻列表里的url
@@ -136,14 +135,42 @@ public class ContentGrab {
             Elements lis = doc.select(".articleList li");
             for (Element li : lis) {
                 String linkHref = li.select(".text a").attr("href");
-//                this.saveNews(linkHref);
                 String linkText = li.select(".text a").text();
+                //截取新闻标题后面的时间-年月日格式
                 String time = li.select(".publishTime").text().substring(0, 10);    //时间
+                if(DateUtil.isToday(time)){
+                    //是当天新闻，继续解析
+                    this.parseDaheNewsHtml(linkHref);
+                }
                 log.info(linkHref+""+linkText+ ""+time);
             }
         } catch (IOException e) {
             log.error("JSOUP获取HTML时发生错误：{}",e.getMessage());
             throw new GrabException(ResultEnmu.JSOUP_FAIL);
+        }
+    }
+
+    /**
+     * 解析央广新闻文章页面
+     * @param url
+     */
+    public void parseCNRNewsHtml(String url){
+        ArticleDTO articleDTO = new ArticleDTO();
+        try {
+            Document doc = Jsoup.connect(url).get();
+            //标题
+            articleDTO.setArticleTitle(doc.select(".subject h2").text());
+            articleDTO.setContentTitle(doc.select(".subject h2").text());
+            //发布时间
+            articleDTO.setPublishTime("");
+            //来源
+            articleDTO.setArticleOrigin(doc.getElementById("source_baidu").text());
+            //内容
+            articleDTO.setContentBody(doc.getElementById("mainCon").html());
+            //作者
+            articleDTO.setArticleAuthor(doc.getElementById("editor_baidu").text());
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
