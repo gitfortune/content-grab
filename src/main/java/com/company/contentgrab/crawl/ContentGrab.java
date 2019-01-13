@@ -49,7 +49,7 @@ public class ContentGrab {
 //        grabSinaLinks(sina);
 //        grabDaHeLinks(dahe);
         LocalDate parse = LocalDate.parse("2019-12-03");
-        log.info(parse.toString());
+        log.info(parse.toString()+"");
     }
 
     /**
