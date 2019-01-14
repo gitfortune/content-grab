@@ -14,6 +14,7 @@ import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.safety.Whitelist;
 import org.jsoup.select.Elements;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -42,14 +43,11 @@ public class ContentGrab {
     @Autowired
     ArticleServiceAPI articleServiceAPI;
 
-    LocalDate date = LocalDate.now();
-
     public void process(){
 //        grabCNRLinks(cnr);
 //        grabSinaLinks(sina);
 //        grabDaHeLinks(dahe);
-        LocalDate parse = LocalDate.parse("2019-12-03");
-        log.info(parse.toString()+"");
+        parseSinaNewsHtml("");
     }
 
     /**
@@ -63,14 +61,12 @@ public class ContentGrab {
             Elements lis = doc.select("#content li");
             for (Element li : lis) {
                 String linkHref = li.getElementsByTag("a").attr("href");
-                String linkText = li.getElementsByTag("a").text();
                 //截取新闻标题后面的时间-年月日格式
                 String time = li.getElementsByTag("span").text().substring(0, 10);
                 if(DateUtil.isToday(time)){
                     //是当天新闻，继续解析
                     this.parseDaheNewsHtml(linkHref);
                 }
-//                log.info(linkHref+""+linkText+ ""+time);
             }
         } catch (IOException e) {
             log.error("JSOUP获取大河网新闻列表时发生异常：{}",e.getMessage());
@@ -81,9 +77,9 @@ public class ContentGrab {
     /**
      * 解析大河网新闻文章页面
      */
-    public void parseDaheNewsHtml(String url){
+    private void parseDaheNewsHtml(String url){
+        ArticleDTO articleDTO = new ArticleDTO();
         try {
-            ArticleDTO articleDTO = new ArticleDTO();
             Connection conn = Jsoup.connect(url).timeout(5000);
             conn.header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
             conn.header("Accept-Encoding", "gzip, deflate, sdch");
@@ -91,19 +87,7 @@ public class ContentGrab {
             conn.header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36");
 
             Document doc = conn.get();
-            log.info("标题："+doc.getElementById("4g_title").text());
-            Element pubtime = doc.getElementById("pubtime_baidu");
-            log.info("发布时间"+pubtime.text());
-            Element source = doc.getElementById("source_baidu");
-            log.info("来源"+source.text());
-            Element body = doc.getElementById("mainCon");
-            Elements imgs = body.getElementsByTag("img");
-            for (Element img : imgs){
-                log.info("图片："+img.attr("src"));
-            }
-            log.info("内容"+body.html());
-            Element editor = doc.getElementById("editor_baidu");
-            log.info("编辑"+editor.text());
+
             //标题
             articleDTO.setArticleTitle(doc.getElementById("4g_title").text());
             articleDTO.setContentTitle(doc.getElementById("4g_title").text());
@@ -115,12 +99,11 @@ public class ContentGrab {
             articleDTO.setContentBody(doc.getElementById("mainCon").html());
             //作者
             articleDTO.setArticleAuthor(doc.getElementById("editor_baidu").text());
-            RestResponse<ArticleDTO> articleDTORestResponse = articleServiceAPI.create("-1", "-1", articleDTO);
-            log.info("状态码："+articleDTORestResponse.getCode());
         } catch (IOException e) {
             log.error("JSOUP解析大河网文章时发生异常：{}",e.getMessage());
             throw new GrabException(ResultEnmu.JSOUP_FAIL);
         }
+        this.saveNews(articleDTO);
     }
 
 
@@ -135,14 +118,12 @@ public class ContentGrab {
             Elements lis = doc.select(".articleList li");
             for (Element li : lis) {
                 String linkHref = li.select(".text a").attr("href");
-                String linkText = li.select(".text a").text();
                 //截取新闻标题后面的时间-年月日格式
                 String time = li.select(".publishTime").text().substring(0, 10);    //时间
                 if(DateUtil.isToday(time)){
                     //是当天新闻，继续解析
-                    this.parseDaheNewsHtml(linkHref);
+                    this.parseCNRNewsHtml(linkHref);
                 }
-                log.info(linkHref+""+linkText+ ""+time);
             }
         } catch (IOException e) {
             log.error("JSOUP获取HTML时发生错误：{}",e.getMessage());
@@ -154,7 +135,7 @@ public class ContentGrab {
      * 解析央广新闻文章页面
      * @param url
      */
-    public void parseCNRNewsHtml(String url){
+    private void parseCNRNewsHtml(String url){
         ArticleDTO articleDTO = new ArticleDTO();
         try {
             Document doc = Jsoup.connect(url).get();
@@ -162,24 +143,28 @@ public class ContentGrab {
             articleDTO.setArticleTitle(doc.select(".subject h2").text());
             articleDTO.setContentTitle(doc.select(".subject h2").text());
             //发布时间
-            articleDTO.setPublishTime("");
+            articleDTO.setPublishTime(doc.select(".source span").first().text());
             //来源
-            articleDTO.setArticleOrigin(doc.getElementById("source_baidu").text());
+            articleDTO.setArticleOrigin("央广网");
             //内容
-            articleDTO.setContentBody(doc.getElementById("mainCon").html());
+            articleDTO.setContentBody(doc.getElementsByClass("TRS_Editor").html());
             //作者
-            articleDTO.setArticleAuthor(doc.getElementById("editor_baidu").text());
+            String str = doc.getElementsByClass("editor").text();
+            String editor = str.substring(4);
+            articleDTO.setArticleAuthor(editor);
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("JSOUP解析央广新闻文章时发生异常：{}",e.getMessage());
+            throw new GrabException(ResultEnmu.JSOUP_FAIL);
         }
+        this.saveNews(articleDTO);
     }
 
 
     /**
-     * 抓取新浪河南新闻链接
+     * 抓取新浪河南新闻链接（动态页面，Jsoup无法解析，需要使用htmlUnit）
      */
     public void grabSinaLinks(String url){
-
+        int year = LocalDate.now().getYear();
         // HtmlUnit 模拟浏览器
         WebClient webClient = new WebClient(BrowserVersion.CHROME);
         webClient.getOptions().setJavaScriptEnabled(true);              // 启用JS解释器，默认为true
@@ -193,34 +178,64 @@ public class ContentGrab {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        webClient.waitForBackgroundJavaScript(10000);               // 等待js后台执行10秒
+        webClient.waitForBackgroundJavaScript(20000);               // 等待js后台执行20秒
 
         String pageAsXml = page.asXml();
 
-        int i = 0;
         Document doc = Jsoup.parse(pageAsXml);
         //根据页面html的结构，获取该页面的新闻列表里的url
-//        Elements links = doc.select("#listArticle_page_0 h3 a");
         Element element = doc.getElementById("listArticle_page_0");
         //获取li标签集合
         Elements lis = element.getElementsByTag("li");
         for (Element li : lis) {
-            Elements time = li.getElementsByClass("time");
-//            time.text().substring(0,5);   //时间
+            String str = li.getElementsByClass("time").text().substring(0,5);
             String linkHref = li.select("h3 a").attr("href");
-//                this.saveNews(linkHref);
-            String linkText = li.select("h3 a").text();
-            log.info(linkHref+""+linkText+ time.text().substring(0,5));
+            //按年月日格式，拼接时间
+            String time = year + "-" + str;
+            if(DateUtil.isToday(time)){
+                //是当天新闻，继续解析
+                this.parseSinaNewsHtml(linkHref);
+            }
         }
     }
 
     /**
-     * 保存
+     * 解析新浪河南新闻文章页面
      * @param url
      */
-    public void saveNews(String url){
-        String url1 = "https://news.dahe.cn/2018/09-16/376490.html";
+    private void parseSinaNewsHtml(String url) {
+        ArticleDTO articleDTO = new ArticleDTO();
+        try {
+            Document doc = Jsoup.connect("http://henan.sina.com.cn/news/z/2019-01-14/detail-ihqfskcn6862290.shtml").get();
+            //标题
+            articleDTO.setArticleTitle(doc.select("#artibody h1").text());
+            articleDTO.setContentTitle(doc.select("#artibody h1").text());
+            //发布时间
+            articleDTO.setPublishTime(doc.select(".source-time span").first().text());
+            //来源
+            articleDTO.setArticleOrigin(doc.getElementById("art_source").text());
 
+            //新浪河南文章内容包含广告，js代码，样式，以及其他无用代码，需要先把这些都清除
+            doc.select(".news_weixin_ercode").remove();
+            String unsafe = doc.select(".article-body").html();
+            //使用Whitelist。relaxed()这个过滤器允许的标签最多
+            String safe = Jsoup.clean(unsafe,Whitelist.relaxed());
+            //内容
+            articleDTO.setContentBody(safe);
+        } catch (IOException e) {
+            log.error("JSOUP解析新浪河南文章时发生异常：{}",e.getMessage());
+            throw new GrabException(ResultEnmu.JSOUP_FAIL);
+        }
+        this.saveNews(articleDTO);
+
+    }
+
+    /**
+     * 保存
+     */
+    public void saveNews(ArticleDTO articleDTO){
+        RestResponse<ArticleDTO> articleDTORestResponse = articleServiceAPI.create("-1", "-1", articleDTO);
+        log.info("状态码："+articleDTORestResponse.getCode());
     }
 
 }
