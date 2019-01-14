@@ -34,7 +34,7 @@ public class ContentGrabApplicationTests {
 
     @Test
     public void save(){
-        contentGrab.saveNews("");
+//        contentGrab.saveNews("");
     }
 
 }

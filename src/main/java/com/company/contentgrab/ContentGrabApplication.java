@@ -9,9 +9,9 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
 @EnableScheduling
-//@EnableDiscoveryClient
-//@EnableFeignClients(basePackages = {"com.hnradio.cmsds.api"})
-//@EnableHystrix
+@EnableDiscoveryClient
+@EnableFeignClients(basePackages = {"com.company.contentgrab.api"})
+@EnableHystrix
 public class ContentGrabApplication {
 
     public static void main(String[] args) {

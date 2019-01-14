@@ -34,8 +34,10 @@ eureka:
     lease-renewal-interval-in-seconds: 5    # 续约更新时间间隔（默认30秒）
     lease-expiration-duration-in-seconds: 10 # 续约到期时间（默认90秒）
   client:
+    serviceUrl:
+      defaultZone:  http://localhost:53000/eureka/
     registry-fetch-interval-seconds: 5 # 抓取服务列表
-    register-with-eureka: false   #是否将自己注册到Eureka Server上，默认为true
+    register-with-eureka: true   #是否将自己注册到Eureka Server上，默认为true
     fetch-registry: true   #是否从Eureka Server上获取注册信息，默认为true
 
 #endpoints:

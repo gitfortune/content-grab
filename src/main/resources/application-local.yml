@@ -1,15 +1,10 @@
-#server:
-#  port: 53030
-  
-eureka:
-  client:
-    serviceUrl:
-      defaultZone: http://localhost:53000/eureka/
+server:
+  port: 18080
 
 spring:
 ##################### DB #####################
   datasource: 
-    url: jdbc:mysql://localhost:3306/convert_file?useUnicode=true&characterEncoding=utf-8&characterSetResults=utf8&serverTimezone=Asia/Shanghai&useSSL=false&zeroDateTimeBehavior=CONVERT_TO_NULL
+    url: jdbc:mysql://localhost:3306/cms?useUnicode=true&characterEncoding=utf-8&characterSetResults=utf8&serverTimezone=Asia/Shanghai&useSSL=false&zeroDateTimeBehavior=CONVERT_TO_NULL
     username: root
     password: root
 

@@ -22,6 +22,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 /**
  * 内容抓取
@@ -47,7 +48,7 @@ public class ContentGrab {
 //        grabCNRLinks(cnr);
 //        grabSinaLinks(sina);
 //        grabDaHeLinks(dahe);
-        parseSinaNewsHtml("");
+        parseDaheNewsHtml("https://news.dahe.cn/2019/01-14/436106.html");
     }
 
     /**
@@ -92,13 +93,17 @@ public class ContentGrab {
             articleDTO.setArticleTitle(doc.getElementById("4g_title").text());
             articleDTO.setContentTitle(doc.getElementById("4g_title").text());
             //发布时间
-            articleDTO.setPublishTime(doc.getElementById("pubtime_baidu").text());
+            String time = doc.getElementById("pubtime_baidu").text()
+                    .replace("年", "-")
+                    .replace("月", "-")
+                    .replace("日", " ");
+            articleDTO.setPublishTime(time);
             //来源
-            articleDTO.setArticleOrigin(doc.getElementById("source_baidu").text());
+            articleDTO.setArticleOrigin(doc.getElementById("source_baidu").text().substring(3));
             //内容
             articleDTO.setContentBody(doc.getElementById("mainCon").html());
-            //作者
-            articleDTO.setArticleAuthor(doc.getElementById("editor_baidu").text());
+            //作者,大河网个别文章的编辑后面会加上审核：xxx字样，这里将它去除，只保留编辑姓名
+            articleDTO.setArticleAuthor(doc.getElementById("editor_baidu").text().substring(3,7));
         } catch (IOException e) {
             log.error("JSOUP解析大河网文章时发生异常：{}",e.getMessage());
             throw new GrabException(ResultEnmu.JSOUP_FAIL);
@@ -151,6 +156,7 @@ public class ContentGrab {
             //作者
             String str = doc.getElementsByClass("editor").text();
             String editor = str.substring(4);
+            log.info(editor);
             articleDTO.setArticleAuthor(editor);
         } catch (IOException e) {
             log.error("JSOUP解析央广新闻文章时发生异常：{}",e.getMessage());
