@@ -13,7 +13,7 @@ public class TaskConfig {
     @Autowired
     private ContentGrab contentGrab;
 
-    @Scheduled(cron = "0/10 * * * * *")
+    @Scheduled(cron = "0/30 * * * * *")
     public void grabTask(){
         log.info("执行抓取任务");
         contentGrab.process();

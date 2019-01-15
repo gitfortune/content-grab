@@ -12,7 +12,7 @@
     <artifactId>content-grab</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>content-grab</name>
-    <description>Demo project for Spring Boot</description>
+    <description>grab content</description>
 
     <properties>
         <java.version>1.8</java.version>

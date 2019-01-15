@@ -3,9 +3,12 @@ package com.company.contentgrab.crawl;
 import com.company.contentgrab.api.ArticleServiceAPI;
 import com.company.contentgrab.common.RestResponse;
 import com.company.contentgrab.enmu.ResultEnmu;
+import com.company.contentgrab.entity.ArticleDO;
 import com.company.contentgrab.entity.ArticleDTO;
 import com.company.contentgrab.exception.GrabException;
+import com.company.contentgrab.service.HainaService;
 import com.company.contentgrab.utils.DateUtil;
+import com.company.contentgrab.utils.StringUtil;
 import com.gargoylesoftware.htmlunit.BrowserVersion;
 import com.gargoylesoftware.htmlunit.WebClient;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
@@ -23,6 +26,8 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.List;
 
 /**
  * 内容抓取
@@ -44,11 +49,14 @@ public class ContentGrab {
     @Autowired
     ArticleServiceAPI articleServiceAPI;
 
+    @Autowired
+    private HainaService hainaService;
+
     public void process(){
 //        grabCNRLinks(cnr);
 //        grabSinaLinks(sina);
 //        grabDaHeLinks(dahe);
-        parseDaheNewsHtml("https://news.dahe.cn/2019/01-14/436106.html");
+//        parseDaheNewsHtml("https://news.dahe.cn/2019/01-14/436106.html");
     }
 
     /**
@@ -62,7 +70,7 @@ public class ContentGrab {
             Elements lis = doc.select("#content li");
             for (Element li : lis) {
                 String linkHref = li.getElementsByTag("a").attr("href");
-                //截取新闻标题后面的时间-年月日格式
+                //截取新闻标题后面的时间(年月日格式)
                 String time = li.getElementsByTag("span").text().substring(0, 10);
                 if(DateUtil.isToday(time)){
                     //是当天新闻，继续解析
@@ -97,13 +105,14 @@ public class ContentGrab {
                     .replace("年", "-")
                     .replace("月", "-")
                     .replace("日", " ");
-            articleDTO.setPublishTime(time);
+            //大河新闻的发布时间缺少 秒，补全
+            articleDTO.setPublishTime(time+":00");
             //来源
             articleDTO.setArticleOrigin(doc.getElementById("source_baidu").text().substring(3));
             //内容
             articleDTO.setContentBody(doc.getElementById("mainCon").html());
             //作者,大河网个别文章的编辑后面会加上审核：xxx字样，这里将它去除，只保留编辑姓名
-            articleDTO.setArticleAuthor(doc.getElementById("editor_baidu").text().substring(3,7));
+            articleDTO.setArticleAuthor(doc.getElementById("editor_baidu").text().substring(3,7).trim());
         } catch (IOException e) {
             log.error("JSOUP解析大河网文章时发生异常：{}",e.getMessage());
             throw new GrabException(ResultEnmu.JSOUP_FAIL);
@@ -237,11 +246,55 @@ public class ContentGrab {
     }
 
     /**
-     * 保存
+     * Feign调用微服务hnradio-cms的方法 保存数据
      */
     public void saveNews(ArticleDTO articleDTO){
         RestResponse<ArticleDTO> articleDTORestResponse = articleServiceAPI.create("-1", "-1", articleDTO);
         log.info("状态码："+articleDTORestResponse.getCode());
+    }
+
+    private void hainaProcess(){
+        try {
+            List<ArticleDO> list = hainaService.listNotPublish();
+            if (list != null && list.size() > 0) {
+                //首先修改最大id
+                log.info("海纳采集合并到CMS开始");
+                long maxId = list.stream().max(Comparator.comparing(ArticleDO::getId)).orElse(new ArticleDO()).getId();
+                log.info("海纳采集合并到CMS开始编号:" + maxId + "/数量:" + list.size());
+                hainaService.updateUsedId(maxId);
+
+                for (ArticleDO bean : list) {
+                    ArticleDTO articleDTO = new ArticleDTO();
+                    /*if (ArticleBusiness.getInstance().contains(bean)) {
+                        continue;
+                    }*/
+                    articleDTO.setLinkTo(bean.getFromUrl());//采集源地址存储到link_to
+                    articleDTO.setChannelId(bean.getChannelId() > 0 ? bean.getChannelId()+"" : "1262");//暂时发布到测试栏目
+//                    articleDTO.setId(0);//在cms里存储新闻
+                    articleDTO.setContentTitle(StringUtil.processQuotationMarks(bean.getTitle()));
+                    articleDTO.setContentTitle(StringUtil.processQuotationMarks(bean.getTitleHome()));
+                    articleDTO.setSeoDescription(StringUtil.processQuotationMarks(bean.getDescription()));
+
+//                    ArticleBusiness.getInstance().doArticleBody(bean);
+//                    int r = ArticleBusiness.getInstance().save(bean);
+                    //资讯类直接发布
+                    /*if (r > 0 && bean.getChannel_id() == 102) {
+                        TaskPoolExecutor.getInstance().submitArticlePublishAsTask(bean);
+                        bean.setPublish_time(Utils.currentTimestamp());
+                    }
+                    if (r > 0) {
+                        LogBean logBean = new LogBean(1206, "海纳批量", " 保存并发布文章", "保存并发布文章:" + bean.getTitle() + "[" + bean.getId() + "]");
+                        logBean.setArticle_id(bean.getId());
+                        logBean.setChannel_id(bean.getChannel_id());
+                        LogBusiness.getInstance().addArticleLog(logBean);
+                    }*/
+                    this.saveNews(articleDTO);
+                }
+            }
+        } catch (Exception e) {
+            log.error("海纳定时异常:"+e.getMessage());
+        }
+
     }
 
 }

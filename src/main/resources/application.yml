@@ -2,10 +2,11 @@ spring:
   application:
     name: content-grab
   profiles: 
-    active: local
+    active: dev
 ##################### DB #####################
   datasource: 
     type: com.alibaba.druid.pool.DruidDataSource
+    #driver-class-name: com.mysql.jdbc.Driver
     driver-class-name: com.mysql.cj.jdbc.Driver
     initialSize: 5
     minIdle: 5
@@ -77,6 +78,7 @@ management:
       exposure:
         include: refresh,health,info,env
 
+#需要抓取的网址
 grab:
   dahe: https://news.dahe.cn/nxw/   #大河网
   cnr: http://news.cnr.cn/dj/   #央广
