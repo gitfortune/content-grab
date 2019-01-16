@@ -23,7 +23,7 @@ public class HainaServiceImpl implements HainaService {
     @Override
     public List<ArticleDO> listNotPublish() {
         BigInteger startId = findUsedIdById();
-        //article的id是bigint对应long，common的used_id是bigint(20) unsigned 对应BigInteger，
+        //海纳数据库中article的id是bigint对应long，common的used_id是bigint(20) unsigned 对应BigInteger，
         //两者不一致，不改字段类型的情况下，先这样处理
         List<ArticleDO> articleList = findArticleNotPub(startId.longValue());
         return articleList;

@@ -6,7 +6,7 @@ public class DateUtil {
 
     /**
      *  判断是否是当天
-     * @param str 格式为xxxx-xx-xx的时间字符串
+     * @param str 格式为yyyy-mm-dd的时间字符串
      * @return
      */
     public static boolean isToday(String str){
@@ -17,4 +17,6 @@ public class DateUtil {
         }
         return false;
     }
+
+//    public static boolean compareTo
 }

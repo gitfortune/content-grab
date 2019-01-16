@@ -18,6 +18,8 @@ import java.math.BigInteger;
 @ApiModel(value = "CommonDO", description = "海纳系统common实体类")
 public class CommonDO implements Serializable {
 
+    private static final long serialVersionUID = 1377668874800903374L;
+
     @Id
     @ApiModelProperty("主键")
     private int id;

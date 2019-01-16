@@ -5,8 +5,8 @@ import lombok.Getter;
 @Getter
 public enum ResultEnmu {
 
-    JSOUP_FAIL(1,"JSOUP获取HTML时发生错误"),
-
+    JSOUP_FAIL(1,"JSOUP获取HTML时发生异常"),
+    HAINA_FAIL(2,"海纳存储到CMS发生异常"),
     ;
 
 

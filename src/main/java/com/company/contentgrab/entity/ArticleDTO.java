@@ -13,9 +13,10 @@ import java.io.Serializable;
  * @Description:
  */
 @Data
-@ApiModel(value = "ArticleDTO", description = "文章")
+@ApiModel(value = "ArticleDTO", description = "CMS系统-文章")
 public class ArticleDTO implements Serializable {
 
+    private static final long serialVersionUID = 6505303490592793757L;
     /**
      *   文档编号
      */
@@ -238,4 +239,5 @@ public class ArticleDTO implements Serializable {
      */
     @ApiModelProperty(value = "授权标示")
     private String clientLicenseId;
+
 }

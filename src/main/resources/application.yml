@@ -84,3 +84,6 @@ grab:
   cnr: http://news.cnr.cn/dj/   #央广
   sina: http://henan.sina.com.cn/news/z/list.shtml  #新浪河南
 
+# Scheduled
+#scheduled: 0/2 * * * * *
+

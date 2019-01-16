@@ -16,10 +16,10 @@ import java.io.Serializable;
 @Data
 @Entity
 @Table(name = "article")
-@DynamicInsert
 @ApiModel(value = "ArticleDO", description = "海纳系统Article实体类")
 public class ArticleDO implements Serializable {
 
+    private static final long serialVersionUID = 6532319362650020783L;
     @Id
     @ApiModelProperty("文档ID")
     private long id;

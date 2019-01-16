@@ -26,6 +26,8 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
 
@@ -57,6 +59,9 @@ public class ContentGrab {
 //        grabSinaLinks(sina);
 //        grabDaHeLinks(dahe);
 //        parseDaheNewsHtml("https://news.dahe.cn/2019/01-14/436106.html");
+//        hainaProcess();
+        int i = LocalTime.now().compareTo(LocalTime.parse("17:59"));
+        log.info(i+"");
     }
 
     /**
@@ -69,11 +74,13 @@ public class ContentGrab {
             //获取新闻列表 li标签集合
             Elements lis = doc.select("#content li");
             for (Element li : lis) {
-                String linkHref = li.getElementsByTag("a").attr("href");
+                String linkHref = li.getElementsByTag("datea").attr("href");
                 //截取新闻标题后面的时间(年月日格式)
-                String time = li.getElementsByTag("span").text().substring(0, 10);
-                if(DateUtil.isToday(time)){
-                    //是当天新闻，继续解析
+                String date = li.getElementsByTag("span").text().substring(0, 10);
+                //文章时间的时分秒
+                String time = li.getElementsByTag("span").text().substring(11);
+                if(DateUtil.isToday(date) && parseOrNot(time)){
+                    //是当天且符合条件的新闻，继续解析
                     this.parseDaheNewsHtml(linkHref);
                 }
             }
@@ -96,7 +103,7 @@ public class ContentGrab {
             conn.header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36");
 
             Document doc = conn.get();
-
+            articleDTO.setLinkTo(url);
             //标题
             articleDTO.setArticleTitle(doc.getElementById("4g_title").text());
             articleDTO.setContentTitle(doc.getElementById("4g_title").text());
@@ -133,8 +140,8 @@ public class ContentGrab {
             for (Element li : lis) {
                 String linkHref = li.select(".text a").attr("href");
                 //截取新闻标题后面的时间-年月日格式
-                String time = li.select(".publishTime").text().substring(0, 10);    //时间
-                if(DateUtil.isToday(time)){
+                String date = li.select(".publishTime").text().substring(0, 10);    //时间
+                if(DateUtil.isToday(date)){
                     //是当天新闻，继续解析
                     this.parseCNRNewsHtml(linkHref);
                 }
@@ -152,6 +159,7 @@ public class ContentGrab {
     private void parseCNRNewsHtml(String url){
         ArticleDTO articleDTO = new ArticleDTO();
         try {
+            articleDTO.setLinkTo(url);
             Document doc = Jsoup.connect(url).get();
             //标题
             articleDTO.setArticleTitle(doc.select(".subject h2").text());
@@ -173,7 +181,6 @@ public class ContentGrab {
         }
         this.saveNews(articleDTO);
     }
-
 
     /**
      * 抓取新浪河南新闻链接（动态页面，Jsoup无法解析，需要使用htmlUnit）
@@ -206,8 +213,8 @@ public class ContentGrab {
             String str = li.getElementsByClass("time").text().substring(0,5);
             String linkHref = li.select("h3 a").attr("href");
             //按年月日格式，拼接时间
-            String time = year + "-" + str;
-            if(DateUtil.isToday(time)){
+            String date = year + "-" + str;
+            if(DateUtil.isToday(date)){
                 //是当天新闻，继续解析
                 this.parseSinaNewsHtml(linkHref);
             }
@@ -222,6 +229,7 @@ public class ContentGrab {
         ArticleDTO articleDTO = new ArticleDTO();
         try {
             Document doc = Jsoup.connect("http://henan.sina.com.cn/news/z/2019-01-14/detail-ihqfskcn6862290.shtml").get();
+            articleDTO.setLinkTo(url);
             //标题
             articleDTO.setArticleTitle(doc.select("#artibody h1").text());
             articleDTO.setContentTitle(doc.select("#artibody h1").text());
@@ -233,7 +241,7 @@ public class ContentGrab {
             //新浪河南文章内容包含广告，js代码，样式，以及其他无用代码，需要先把这些都清除
             doc.select(".news_weixin_ercode").remove();
             String unsafe = doc.select(".article-body").html();
-            //使用Whitelist。relaxed()这个过滤器允许的标签最多
+            //使用Whitelist.relaxed()这个过滤器允许的标签最多
             String safe = Jsoup.clean(unsafe,Whitelist.relaxed());
             //内容
             articleDTO.setContentBody(safe);
@@ -242,16 +250,8 @@ public class ContentGrab {
             throw new GrabException(ResultEnmu.JSOUP_FAIL);
         }
         this.saveNews(articleDTO);
-
     }
 
-    /**
-     * Feign调用微服务hnradio-cms的方法 保存数据
-     */
-    public void saveNews(ArticleDTO articleDTO){
-        RestResponse<ArticleDTO> articleDTORestResponse = articleServiceAPI.create("-1", "-1", articleDTO);
-        log.info("状态码："+articleDTORestResponse.getCode());
-    }
 
     private void hainaProcess(){
         try {
@@ -265,36 +265,44 @@ public class ContentGrab {
 
                 for (ArticleDO bean : list) {
                     ArticleDTO articleDTO = new ArticleDTO();
-                    /*if (ArticleBusiness.getInstance().contains(bean)) {
-                        continue;
-                    }*/
+
                     articleDTO.setLinkTo(bean.getFromUrl());//采集源地址存储到link_to
                     articleDTO.setChannelId(bean.getChannelId() > 0 ? bean.getChannelId()+"" : "1262");//暂时发布到测试栏目
 //                    articleDTO.setId(0);//在cms里存储新闻
                     articleDTO.setContentTitle(StringUtil.processQuotationMarks(bean.getTitle()));
-                    articleDTO.setContentTitle(StringUtil.processQuotationMarks(bean.getTitleHome()));
+                    articleDTO.setArticleTitle(StringUtil.processQuotationMarks(bean.getTitleHome()));
                     articleDTO.setSeoDescription(StringUtil.processQuotationMarks(bean.getDescription()));
+                    articleDTO.setSeoKeywords(StringUtil.processQuotationMarks(bean.getKeywords()));
+                    articleDTO.setContentBody(bean.getBody());
+                    articleDTO.setArticleOrigin(bean.getOrigin());
 
-//                    ArticleBusiness.getInstance().doArticleBody(bean);
-//                    int r = ArticleBusiness.getInstance().save(bean);
-                    //资讯类直接发布
-                    /*if (r > 0 && bean.getChannel_id() == 102) {
-                        TaskPoolExecutor.getInstance().submitArticlePublishAsTask(bean);
-                        bean.setPublish_time(Utils.currentTimestamp());
-                    }
-                    if (r > 0) {
-                        LogBean logBean = new LogBean(1206, "海纳批量", " 保存并发布文章", "保存并发布文章:" + bean.getTitle() + "[" + bean.getId() + "]");
-                        logBean.setArticle_id(bean.getId());
-                        logBean.setChannel_id(bean.getChannel_id());
-                        LogBusiness.getInstance().addArticleLog(logBean);
-                    }*/
                     this.saveNews(articleDTO);
                 }
             }
         } catch (Exception e) {
             log.error("海纳定时异常:"+e.getMessage());
+            throw new GrabException(ResultEnmu.HAINA_FAIL);
         }
-
     }
 
+    /**
+     * Feign调用微服务hnradio-cms的方法 保存数据
+     */
+    public void saveNews(ArticleDTO articleDTO){
+        RestResponse<ArticleDTO> articleDTORestResponse = articleServiceAPI.create("-1", "-1", articleDTO);
+                log.info("状态码："+articleDTORestResponse.getCode());
+    }
+
+    /**
+     * 判断是否需要解析
+     * 1、第一次执行是早8点，如果当前时间小于中午12点，当天文章只抓取小于等于早8点的新闻。2、当前时间大于等于中午12点，只抓取大于早8点的新闻
+     * @return
+     */
+    private boolean parseOrNot(String time){
+        if((LocalTime.now().compareTo(LocalTime.parse("12:00:00")) < 0 && LocalTime.parse(time).compareTo(LocalTime.parse("08:00")) <= 0)
+                || (LocalTime.now().compareTo(LocalTime.parse("12:00:00")) >= 0 && LocalTime.parse(time).compareTo(LocalTime.parse("08:00")) > 0)){
+            return true;
+        }
+        return false;
+    }
 }
