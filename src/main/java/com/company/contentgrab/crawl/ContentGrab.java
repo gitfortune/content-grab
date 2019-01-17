@@ -55,13 +55,11 @@ public class ContentGrab {
     private HainaService hainaService;
 
     public void process(){
-//        grabCNRLinks(cnr);
-//        grabSinaLinks(sina);
-//        grabDaHeLinks(dahe);
+        grabCNRLinks(cnr);
+        grabSinaLinks(sina);
+        grabDaHeLinks(dahe);
 //        parseDaheNewsHtml("https://news.dahe.cn/2019/01-14/436106.html");
-//        hainaProcess();
-        int i = LocalTime.now().compareTo(LocalTime.parse("17:59"));
-        log.info(i+"");
+        hainaProcess();
     }
 
     /**
@@ -74,7 +72,7 @@ public class ContentGrab {
             //获取新闻列表 li标签集合
             Elements lis = doc.select("#content li");
             for (Element li : lis) {
-                String linkHref = li.getElementsByTag("datea").attr("href");
+                String linkHref = li.getElementsByTag("a").attr("href");
                 //截取新闻标题后面的时间(年月日格式)
                 String date = li.getElementsByTag("span").text().substring(0, 10);
                 //文章时间的时分秒
@@ -96,13 +94,7 @@ public class ContentGrab {
     private void parseDaheNewsHtml(String url){
         ArticleDTO articleDTO = new ArticleDTO();
         try {
-            Connection conn = Jsoup.connect(url).timeout(5000);
-            conn.header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
-            conn.header("Accept-Encoding", "gzip, deflate, sdch");
-            conn.header("Accept-Language", "zh-CN,zh;q=0.8");
-            conn.header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36");
-
-            Document doc = conn.get();
+            Document doc = Jsoup.connect(url).get();
             articleDTO.setLinkTo(url);
             //标题
             articleDTO.setArticleTitle(doc.getElementById("4g_title").text());
@@ -119,7 +111,12 @@ public class ContentGrab {
             //内容
             articleDTO.setContentBody(doc.getElementById("mainCon").html());
             //作者,大河网个别文章的编辑后面会加上审核：xxx字样，这里将它去除，只保留编辑姓名
-            articleDTO.setArticleAuthor(doc.getElementById("editor_baidu").text().substring(3,7).trim());
+            String editor_baidu = doc.getElementById("editor_baidu").text();
+            if(editor_baidu.contains("审核")){
+                articleDTO.setArticleAuthor(editor_baidu.substring(3,editor_baidu.indexOf("审")).trim());
+            }else {
+                articleDTO.setArticleAuthor(editor_baidu.substring(3));
+            }
         } catch (IOException e) {
             log.error("JSOUP解析大河网文章时发生异常：{}",e.getMessage());
             throw new GrabException(ResultEnmu.JSOUP_FAIL);
@@ -141,7 +138,9 @@ public class ContentGrab {
                 String linkHref = li.select(".text a").attr("href");
                 //截取新闻标题后面的时间-年月日格式
                 String date = li.select(".publishTime").text().substring(0, 10);    //时间
-                if(DateUtil.isToday(date)){
+                String time = li.select(".publishTime").text().substring(11);
+                if(DateUtil.isToday(date) && parseOrNot(time)){
+                    log.info("央广时间："+time);
                     //是当天新闻，继续解析
                     this.parseCNRNewsHtml(linkHref);
                 }
@@ -210,11 +209,14 @@ public class ContentGrab {
         //获取li标签集合
         Elements lis = element.getElementsByTag("li");
         for (Element li : lis) {
-            String str = li.getElementsByClass("time").text().substring(0,5);
             String linkHref = li.select("h3 a").attr("href");
+            String str = li.getElementsByClass("time").text().substring(0,5);
+            String time = li.getElementsByClass("time").text().substring(6);
+
             //按年月日格式，拼接时间
             String date = year + "-" + str;
-            if(DateUtil.isToday(date)){
+            if(DateUtil.isToday(date) && parseOrNot(time)){
+                log.info("新浪时间："+time);
                 //是当天新闻，继续解析
                 this.parseSinaNewsHtml(linkHref);
             }
@@ -228,7 +230,7 @@ public class ContentGrab {
     private void parseSinaNewsHtml(String url) {
         ArticleDTO articleDTO = new ArticleDTO();
         try {
-            Document doc = Jsoup.connect("http://henan.sina.com.cn/news/z/2019-01-14/detail-ihqfskcn6862290.shtml").get();
+            Document doc = Jsoup.connect(url).get();
             articleDTO.setLinkTo(url);
             //标题
             articleDTO.setArticleTitle(doc.select("#artibody h1").text());

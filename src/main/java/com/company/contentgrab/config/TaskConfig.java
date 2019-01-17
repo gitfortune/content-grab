@@ -15,10 +15,11 @@ public class TaskConfig {
 
 //    @Scheduled(cron = "0 0 8,12 * * ?")
 //    @Scheduled(cron = "${scheduled}")
-    @Scheduled(cron = "0/5 * * * * *")
-    public void grabTask() throws InterruptedException {
+//    @Scheduled(cron = "0/5 * * * * *")
+    @Scheduled(cron = "0 56 9 * * ? ")
+    public void grabTask(){
         log.info("执行抓取任务");
-        Thread.sleep(1000);
+//        Thread.sleep(1000);
         contentGrab.process();
     }
 
