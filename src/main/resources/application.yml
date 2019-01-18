@@ -82,13 +82,13 @@ management:
 grab:
   dahe:
     url: https://news.dahe.cn/nxw/   #大河网
-    cron: 0 20 18 * * ?              #定时时间
+    cron: 0 44 10 * * ?              #定时时间
   cnr:
     url: http://news.cnr.cn/dj/   #央广
-    cron: 0 20 18 * * ?          #定时时间
+    cron: 0 44 10 * * ?          #定时时间
   sina:
     url: http://henan.sina.com.cn/news/z/list.shtml  #新浪河南
-    cron: 0 0 8,12 * * ?                             #定时时间
+    cron: 30 10 11 * * ?                             #定时时间
   haina:
     cron: 0 0 8,12 * * ?          #定时时间
 

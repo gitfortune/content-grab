@@ -92,7 +92,7 @@ public class GrabSina {
             articleDTO.setArticleTitle(doc.select("#artibody h1").text());
             articleDTO.setContentTitle(doc.select("#artibody h1").text());
             //发布时间
-            articleDTO.setPublishTime(doc.select(".source-time span").first().text());
+            articleDTO.setPublishTime(doc.select(".source-time span").first().text()+":00");
             //来源
             articleDTO.setArticleOrigin(doc.getElementById("art_source").text());
 
@@ -103,9 +103,9 @@ public class GrabSina {
             String safe = Jsoup.clean(unsafe, Whitelist.relaxed());
             //内容
             articleDTO.setContentBody(safe);
-        } catch (IOException e) {
-            log.error("JSOUP解析新浪河南文章时发生异常：{}",e.getMessage());
-            throw new GrabException(ResultEnmu.JSOUP_FAIL);
+        } catch (Exception e) {
+            //这个异常发生在for循环内部，此处不要throw异常，否则for循环会停止。
+            log.error("JSOUP解析新浪河南文章时发生异常：{},异常文章url：{}",e.getMessage(),url);
         }
         //Feign调用微服务hnradio-cms的方法 保存数据
         RestResponse<ArticleDTO> articleDTORestResponse = articleServiceAPI.create("-1", "-1", articleDTO);
