@@ -53,7 +53,7 @@ public class GrabSina {
         try {
             page = webClient.getPage(url);
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("HtmlUnit出错：{}",e);
         }
         webClient.waitForBackgroundJavaScript(20000);               // 等待js后台执行20秒
 
@@ -104,8 +104,8 @@ public class GrabSina {
             //内容
             articleDTO.setContentBody(safe);
         } catch (Exception e) {
-            //这个异常发生在for循环内部，此处不要throw异常，否则for循环会停止。
-            log.error("JSOUP解析新浪河南文章时发生异常：{},异常文章url：{}",e.getMessage(),url);
+            //这个异常发生在for循环内部，被grabSinaLinks（）调用，此处不要throw异常，否则for循环会停止。
+            log.error("JSOUP解析新浪河南文章时发生异常：{},异常文章url：{}",e,url);
         }
         //Feign调用微服务hnradio-cms的方法 保存数据
         RestResponse<ArticleDTO> articleDTORestResponse = articleServiceAPI.create("-1", "-1", articleDTO);

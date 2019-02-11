@@ -60,7 +60,7 @@ public class GrabHaiNa {
                 }
             }
         } catch (Exception e) {
-            log.error("海纳定时异常:"+e.getMessage());
+            log.error("海纳定时异常:"+e);
             throw new GrabException(ResultEnmu.HAINA_FAIL);
         }
     }

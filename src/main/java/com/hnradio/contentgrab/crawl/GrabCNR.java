@@ -53,7 +53,7 @@ public class GrabCNR {
                 }
             }
         } catch (IOException e) {
-            log.error("JSOUP获取HTML时发生错误：{}",e.getMessage());
+            log.error("JSOUP获取HTML时发生错误：{}",e);
             throw new GrabException(ResultEnmu.JSOUP_FAIL);
         }
     }
@@ -84,7 +84,7 @@ public class GrabCNR {
             articleDTO.setArticleAuthor(editor);
         } catch (IOException e) {
             //这个异常发生在for循环内部，此处不要throw异常，否则for循环会停止。
-            log.error("JSOUP解析央广新闻文章时发生异常：{},异常文章url：{}",e.getMessage(),url);
+            log.error("JSOUP解析央广新闻文章时发生异常：{},异常文章url：{}",e,url);
         }
         //Feign调用微服务hnradio-cms的方法 保存数据
         RestResponse<ArticleDTO> articleDTORestResponse = articleServiceAPI.create("-1", "-1", articleDTO);

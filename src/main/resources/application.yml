@@ -85,7 +85,7 @@ grab:
     cron: 0 44 10 * * ?              #定时时间
   cnr:
     url: http://news.cnr.cn/dj/   #央广
-    cron: 0 44 10 * * ?          #定时时间
+    cron: 0 22 11 * * ?          #定时时间
   sina:
     url: http://henan.sina.com.cn/news/z/list.shtml  #新浪河南
     cron: 30 10 11 * * ?                             #定时时间

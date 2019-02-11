@@ -10,4 +10,10 @@ import org.springframework.test.context.junit4.SpringRunner;
 @Slf4j
 public class Test {
 
+    @org.junit.Test
+    public void test(){
+        String str = "祎";
+        log.info(str);
+    }
+
 }
